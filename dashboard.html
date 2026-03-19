@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+    <head>
+        <title>IoT FrostEye</title>
+        <meta charset="UTF-8">
+        <meta name="description" content="Plataforma IoT de monitoramento climático que simula sensores de temperatura e umidade, exibe gráficos em tempo real e detecta automaticamente risco de geada.">
+        <meta name="keywords" content="HTML, CSS, JavaScript, NodeJS">
+        <meta name="author" content="Murillo, André, Douglas, Lara e Alex">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="icon" href="img/icone_web.png">
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+        <style>
+            body{
+            font-family: Arial;
+            text-align:center;
+            background:#eef2f7;
+            }
+            .painel{
+            display:flex;
+            justify-content:center;
+            gap:40px;
+            font-size:24px;
+            margin:20px;
+            }
+            .alerta{
+            font-size:28px;
+            margin:20px;
+            }
+            canvas{
+            max-width:600px;
+            margin:20px auto;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Estação Climática IoT FrostEye</h1>
+
+        <div class="painel">
+            <div id="temp">Temperatura: --</div>
+            <div id="umid">Umidade: --</div>
+        </div>
+
+        <div id="geada" class="alerta"></div>
+
+        <canvas id="grafTemp"></canvas>
+        <canvas id="grafUmid"></canvas>
+
+        <script>
+
+            let temps=[]
+            let umids=[]
+            let labels=[]
+
+            const grafTemp=new Chart(document.getElementById("grafTemp"),{
+
+            type:"line",
+
+            data:{
+            labels:labels,
+            datasets:[{
+            label:"Temperatura °C",
+            data:temps
+            }]
+            }
+
+            })
+
+            const grafUmid=new Chart(document.getElementById("grafUmid"),{
+
+            type:"line",
+
+            data:{
+            labels:labels,
+            datasets:[{
+            label:"Umidade %",
+            data:umids
+            }]
+            }
+
+            })
+
+            async function atualizar(){
+
+            let resposta=await fetch("http://localhost:3000/sensor")
+            let dados=await resposta.json()
+
+            if(dados.length>0){
+
+            let ultimo=dados[dados.length-1]
+
+            document.getElementById("temp").innerHTML=
+            "Temperatura: "+ultimo.temperatura+" °C"
+
+            document.getElementById("umid").innerHTML=
+            "Umidade: "+ultimo.umidade+" %"
+
+            if(ultimo.risco_geada===1){
+
+            document.getElementById("geada").innerHTML=
+            "⚠️ RISCO DE GEADA"
+
+            document.getElementById("geada").style.color="red"
+
+            }else{
+
+            document.getElementById("geada").innerHTML=
+            "Sem risco de geada"
+
+            document.getElementById("geada").style.color="green"
+
+            }
+
+            labels.push(new Date().toLocaleTimeString())
+            temps.push(ultimo.temperatura)
+            umids.push(ultimo.umidade)
+
+            if(labels.length>20){
+
+            labels.shift()
+            temps.shift()
+            umids.shift()
+
+            }
+
+            grafTemp.update()
+            grafUmid.update()
+
+            }
+
+            }
+
+            setInterval(atualizar,2000)
+        </script>
+    </body>
+</html>
